@@ -18,10 +18,8 @@ from util import adjust_learning_rate, warmup_learning_rate
 from util import set_optimizer, save_model, label_convert
 from networks.resnet_big import SupConResNet, LinearClassifier
 from networks.simCNN import simCNN_contrastive
-from networks.resnet_preact import SupConpPreactResNet
 from networks.mlp import SupConMLP
 from losses import SupConLoss
-
 
 
 try:
@@ -34,9 +32,9 @@ except ImportError:
 def parse_option():
     parser = argparse.ArgumentParser('argument for training')
 
-    parser.add_argument('--print_freq', type=int, default=50,
+    parser.add_argument('--print_freq', type=int, default=10,
                         help='print frequency')
-    parser.add_argument('--save_freq', type=int, default=100,
+    parser.add_argument('--save_freq', type=int, default=10,
                         help='save frequency')
     parser.add_argument('--batch_size', type=int, default=256,
                         help='batch_size')
@@ -60,6 +58,7 @@ def parse_option():
     # model dataset
     parser.add_argument('--model', type=str, default='resnet18')
     parser.add_argument('--datasets', type=str, default='colored_mnist', help='dataset')
+    parser.add_argument("--protocol_idx", type=int, default=0,)
     parser.add_argument('--data_folder', type=str, default="../datasets", help='path to custom dataset')
     parser.add_argument('--method', type=str, default='SimCLR',
                         choices=['SupCon', 'SimCLR', "SimCLR_CE", "MoCo", "MaskCon"], help='choose method')
@@ -262,7 +261,7 @@ def train(train_loader, model, linear, criterion1, criterion2, optimizer, epoch,
                   "loss_sup {loss_sup.val:.3f} ({loss_sup.avg:.3f})\t"
                   "loss_ssl {loss_ssl.val:.3f} ({loss_ssl.avg:.3f})\t".format(
                    epoch, idx + 1, len(train_loader), batch_time=batch_time,
-                   data_time=data_time, loss=losses, loss_sup=loss_sup, loss_ssl=loss_ssl))
+                   data_time=data_time, loss=losses, loss_sup=losses_sup, loss_ssl=losses_ssl))
             if opt.method == "SimCLR":
                 print("loss_ssl {loss_ssl.val:.3f} ({loss_ssl.avg:.3f})\t"
                       "loss_sup {loss_sup.val:.3f} ({loss_sup.avg:.3f})\t".format(
@@ -311,7 +310,7 @@ def main():
     # save the last model
     save_file = os.path.join(
         opt.save_folder, 'last.pth')
-    save_model(model, linear, optimizer, opt, opt.epochs, save_file)
+    save_model(model, optimizer, opt, epoch, save_file)
     with open(os.path.join(opt.save_folder, "loss_" + str(opt.trail)), "wb") as f:
          pickle.dump(losses, f)
 

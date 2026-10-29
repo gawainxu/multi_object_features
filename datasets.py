@@ -22,7 +22,7 @@ image_size_mapping = {"colored_mnist": 28,}
 
 class colored_mnist(Dataset):
     
-    def __init__(self, root, transform=None, color_ratio=1., if_train=1,):
+    def __init__(self, root, transform=None, protocol_idx=0, if_train=1, classes=[]):
         
         MAIN_COLOR = "green"
         INSERTED_COLOR = "red"
@@ -33,9 +33,9 @@ class colored_mnist(Dataset):
             data_folder = os.path.join(root, "colorized-MNIST/testing")
         
         self.dataset_in_digit = torchvision.datasets.ImageFolder(data_folder)
-        
-        self.color_ratio = color_ratio
+
         self.transform = transform
+        self.classes = classes
         self.images_blue, self.digit_labels_blue = [], []
         self.images_green, self.digit_labels_green = [], []
         self.images_red, self.digit_labels_red = [], []
@@ -55,29 +55,56 @@ class colored_mnist(Dataset):
             images_folder, labels_folder = colors_folders[color_key]
             images_folder.append(img)
             labels_folder.append(digit_label)
-            
-        # Protocol 1, 0-4 -> class 0 (), 5-9 -> class 1
+
         self.images = []
         self.labels = []
-        image_folder_main, label_folder_main = colors_folders[MAIN_COLOR]
-        image_folder_inserted, label_folder_inserted = colors_folders[INSERTED_COLOR]
-        self.class_zero = [0,1,2,3,4]
-        
-        num_samples_main = int(len(image_folder_main) * self.color_ratio)
-        num_samples_inserted = int(len(image_folder_main) * (1-self.color_ratio))
-        
-        self.images = image_folder_main[:num_samples_main]
-        self.labels = label_folder_main[:num_samples_main]
-        
-        self.images.extend(image_folder_inserted[:num_samples_inserted])
-        self.labels.extend(label_folder_inserted[:num_samples_inserted])
+
+        if protocol_idx == 0:
+            # Protocol 1, 0-4 -> class 0 (), 5-9 -> class 1
+            color_ratio = 1.
+            image_folder_main, label_folder_main = colors_folders[MAIN_COLOR]
+            image_folder_inserted, label_folder_inserted = colors_folders[INSERTED_COLOR]
+            self.class_zero = [0, 1, 2, 3, 4]
+
+            num_samples_main = int(len(image_folder_main) * color_ratio)
+            num_samples_inserted = int(len(image_folder_main) * (1 - color_ratio))
+
+            self.images = image_folder_main[:num_samples_main]
+            self.labels = label_folder_main[:num_samples_main]
+
+            self.images.extend(image_folder_inserted[:num_samples_inserted])
+            self.labels.extend(label_folder_inserted[:num_samples_inserted])
+
+        elif protocol_idx == 1:
+           # protocol 2, labels follow the digits, all colors exist for individual samples
+           # for the sake of equal comparison with the protocol with single color, the datasets
+           # is downsampled by 3
+           DOWNSAMPLE_RATIO = 3
+           for color, (images_color, labels_color) in colors_map.items():
+               self.images.append(images_color)
+               self.labels.append(labels_color)
+
+           self.images = self.images[::DOWNSAMPLE_RATIO]
+           self.labels = self.labels[::DOWNSAMPLE_RATIO]
+
+           if len(self.classes) > 0:
+               self.select_classes()
+
+        elif protocol_idx == 2:
+            # protocol 3, labels follow the digits, but the colors are the same for all samples
+            TARGET_COLOR = "blue"
+            images_color, labels_color = colors_map[TARGET_COLOR]
+            self.images.extend(images_color)
+            self.labels.extend(labels_color)
+
+            if len(self.classes) > 0:
+                self.select_classes()
             
         
     def __len__(self):
         
         return len(self.images)
-    
-            
+
     def __getitem__(self, idx):
         
         if self.transform is not None: 
@@ -91,7 +118,20 @@ class colored_mnist(Dataset):
             label = 1
         
         return img, label
-        
+
+
+    def select_classes(self):
+
+        self.images_new, self.labels_new = [], []
+        for img, label in zip(self.images, self.labels):
+            if label in self.classes:
+                self.images_new.append(img)
+                self.labels_new.append(label)
+
+        self.images, self.labels = self.images_new, self.labels_new
+        del self.images_blue, self.digit_labels_blue
+
+
         
             
             
