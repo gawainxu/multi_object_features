@@ -12,10 +12,11 @@ import torch.backends.cudnn as cudnn
 from torchvision import transforms
 
 from datasets import colored_mnist
-from datasets import mean_mapping, std_mapping, image_size_mapping
+from datasets import mean_mapping, std_mapping
+from datasets import image_size_mapping, classes_groups
 from util import TwoCropTransform, AverageMeter
 from util import adjust_learning_rate, warmup_learning_rate
-from util import set_optimizer, save_model, label_convert
+from util import set_optimizer, save_model
 from networks.resnet_big import SupConResNet, LinearClassifier
 from networks.simCNN import simCNN_contrastive
 from networks.mlp import SupConMLP
@@ -59,6 +60,7 @@ def parse_option():
     parser.add_argument('--model', type=str, default='resnet18')
     parser.add_argument('--datasets', type=str, default='colored_mnist', help='dataset')
     parser.add_argument("--protocol_idx", type=int, default=0,)
+    parser.add_argument("--class_group_idx", type=int, default=0)
     parser.add_argument('--data_folder', type=str, default="../datasets", help='path to custom dataset')
     parser.add_argument('--method', type=str, default='SimCLR',
                         choices=['SupCon', 'SimCLR', "SimCLR_CE", "MoCo", "MaskCon"], help='choose method')
@@ -101,6 +103,7 @@ def parse_option():
         opt.model_name += "_SimCLR_CE_" + str(opt.method_gama) + "_" + str(opt.method_lam) + "_protocol_"
 
     opt.model_name += str(opt.protocol_idx)
+    opt.model_path = opt.model_path + "_" + str(opt.class_group_idx)
 
     # warm-up for large-batch training,
     if opt.batch_size > 256:
@@ -137,7 +140,7 @@ def set_loader(opt):
                                     transforms.RandomGrayscale(p=0.2),
                                     normalize])
     transform = TwoCropTransform(transform)
-    dataset = colored_mnist(opt.data_folder, transform=transform)
+    dataset = colored_mnist(opt=opt, transform=transform)
 
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=opt.batch_size, shuffle=True,
                                                num_workers=opt.num_workers, pin_memory=True, drop_last=True)

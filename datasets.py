@@ -19,23 +19,27 @@ mean_mapping = {"colored_mnist": (0.1307, 0.1307, 0)}
 std_mapping = {"colored_mnist": (0.3081, 0.3081, 0.3081),}
 image_size_mapping = {"colored_mnist": 28,}
 
+classes_groups = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9],
+                  [0, 1, 2, 3],
+                  [4, 5, 6, 7,],]
+
 
 class colored_mnist(Dataset):
     
-    def __init__(self, root, transform=None, protocol_idx=0, if_train=1, classes=[]):
+    def __init__(self, opt, transform=None, if_train=1):
         
         MAIN_COLOR = "green"
         INSERTED_COLOR = "red"
         
         if if_train:
-            data_folder = os.path.join(root, "colorized-MNIST/training")
+            data_folder = os.path.join(opt.data_folder, "colorized-MNIST/training")
         else:
-            data_folder = os.path.join(root, "colorized-MNIST/testing")
+            data_folder = os.path.join(opt.data_folder, "colorized-MNIST/testing")
         
         self.dataset_in_digit = torchvision.datasets.ImageFolder(data_folder)
 
         self.transform = transform
-        self.classes = classes
+        self.classes = classes_groups[opt.class_group_idx]
         self.images_blue, self.digit_labels_blue = [], []
         self.images_green, self.digit_labels_green = [], []
         self.images_red, self.digit_labels_red = [], []
@@ -59,7 +63,7 @@ class colored_mnist(Dataset):
         self.images = []
         self.labels = []
 
-        if protocol_idx == 0:
+        if opt.protocol_idx == 0:
             # Protocol 1, 0-4 -> class 0 (), 5-9 -> class 1
             color_ratio = 1.
             image_folder_main, label_folder_main = colors_folders[MAIN_COLOR]
@@ -75,7 +79,7 @@ class colored_mnist(Dataset):
             self.images.extend(image_folder_inserted[:num_samples_inserted])
             self.labels.extend(label_folder_inserted[:num_samples_inserted])
 
-        elif protocol_idx == 1:
+        elif opt.protocol_idx == 1:
            # protocol 2, labels follow the digits, all colors exist for individual samples
            # for the sake of equal comparison with the protocol with single color, the datasets
            # is downsampled by 3
@@ -86,19 +90,15 @@ class colored_mnist(Dataset):
 
            self.images = self.images[::DOWNSAMPLE_RATIO]
            self.labels = self.labels[::DOWNSAMPLE_RATIO]
+           self.select_classes()
 
-           if len(self.classes) > 0:
-               self.select_classes()
-
-        elif protocol_idx == 2:
+        elif opt.protocol_idx == 2:
             # protocol 3, labels follow the digits, but the colors are the same for all samples
             TARGET_COLOR = "blue"
             images_color, labels_color = colors_map[TARGET_COLOR]
             self.images.extend(images_color)
             self.labels.extend(labels_color)
-
-            if len(self.classes) > 0:
-                self.select_classes()
+            self.select_classes()
             
         
     def __len__(self):
