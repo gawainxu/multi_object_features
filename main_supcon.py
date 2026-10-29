@@ -77,6 +77,7 @@ def parse_option():
 
     opt = parser.parse_args()
 
+    opt.num_classes = len(classes_groups[opt.protocol_idx])
 
     # check if dataset is path that passed required arguments
     if opt.datasets == 'path':
@@ -162,9 +163,13 @@ def set_model(opt):
         model = SupConMLP()
     else:
         model = simCNN_contrastive(opt, in_channels=in_channels)
-            
-    criterion1 = SupConLoss(temperature=opt.temp)
-    criterion2 = SupConLoss(temperature=opt.temp)
+
+    if opt.method in ["SimCLR", "SupCcn"]:
+        criterion1 = SupConLoss(temperature=opt.temp)
+        criterion2 = SupConLoss(temperature=opt.temp)
+    elif opt.method in ["SimCLR_CE"]:
+        criterion1 = SupConLoss(temperature=opt.temp)
+        criterion2 = torch.nn.CrossEntropyLoss()
 
     # enable synchronized Batch Normalization
     if opt.syncBN:
@@ -181,7 +186,7 @@ def set_model(opt):
         criterion2 = criterion2.cuda()
     cudnn.benchmark = True
 
-    linear = None
+    linear = LinearClassifier(name=opt.model, num_classes=opt.num_classes)
 
     return model, linear, criterion1, criterion2
 
