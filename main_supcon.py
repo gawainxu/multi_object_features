@@ -94,11 +94,13 @@ def parse_option():
 
     opt.model_name = opt.datasets + "_" + opt.model
     if opt.method == "SupCon":
-        opt.model_name += "_SupCon_"
+        opt.model_name += "_SupCon_protocol_"
     elif opt.method == "SimCLR":
-        opt.model_name += "_SimCLR_" + str(opt.method_gama) + "_" + str(opt.method_lam) + "_" + str(opt.temp) + "_"
+        opt.model_name += "_SimCLR_" + str(opt.method_gama) + "_" + str(opt.method_lam) + "_" + str(opt.temp) + "_protocol_"
     elif opt.method == "SimCLR_CE":
-        opt.model_name += "_SimCLR_CE_" + str(opt.method_gama) + "_" + str(opt.method_lam) + "_"
+        opt.model_name += "_SimCLR_CE_" + str(opt.method_gama) + "_" + str(opt.method_lam) + "_protocol_"
+
+    opt.model_name += str(opt.protocol_idx)
 
     # warm-up for large-batch training,
     if opt.batch_size > 256:
