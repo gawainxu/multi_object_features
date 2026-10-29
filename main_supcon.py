@@ -316,7 +316,7 @@ def main():
     save_file = os.path.join(
         opt.save_folder, 'last.pth')
     save_model(model, optimizer, opt, epoch, save_file)
-    with open(os.path.join(opt.save_folder, "loss_" + str(opt.trail)), "wb") as f:
+    with open(os.path.join(opt.save_folder, "loss"), "wb") as f:
          pickle.dump(losses, f)
 
 
